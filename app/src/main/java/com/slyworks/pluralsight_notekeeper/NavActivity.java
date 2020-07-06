@@ -10,12 +10,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -28,6 +24,10 @@ import java.util.List;
 public class NavActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private NoteRecyclerAdapter mNoteRecyclerAdapter;
+    private RecyclerView mRecyclerItems;
+    private LinearLayoutManager mNotesLayoutManager;
+    private CourseRecyclerAdapter mCourseRecyclerAdapter;
+    private GridLayoutManager mCourseLayoutManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +45,12 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
             }
         });
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
+
+
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.setDrawerListener(toggle);
+        toggle.syncState();
 
         NavigationView navigationView = findViewById(R.id.nav_view);
 
@@ -68,7 +74,7 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
         //larger data should use other methods
     }
 
-    private void initialiseDisplayContent() {
+    private void  initialiseDisplayContent() {
         /*
         final ListView listNotes = findViewById(R.id.list_notes);
         List<NoteInfo> notes = DataManager.getInstance().getNotes();
@@ -91,15 +97,46 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
          */
 
         //new code using for using recyclerView
-        final RecyclerView recyclerNotes = findViewById(R.id.list_items);
+        mRecyclerItems = findViewById(R.id.list_items);
 
-        final LinearLayoutManager notesLayoutManager = new LinearLayoutManager(this );
-        recyclerNotes.setLayoutManager(notesLayoutManager);
+        mNotesLayoutManager = new LinearLayoutManager(this );
+        //layout manager for displaying courses i.e from nav_view click
+        mCourseLayoutManager = new GridLayoutManager(this, 2);
 
         List<NoteInfo> notes = DataManager.getInstance().getNotes();
         mNoteRecyclerAdapter = new NoteRecyclerAdapter(this, notes);
 
-        recyclerNotes.setAdapter(mNoteRecyclerAdapter);
+
+        //adding code to display courses
+        List<CourseInfo> courses = DataManager.getInstance().getCourses();
+        mCourseRecyclerAdapter = new CourseRecyclerAdapter(this, courses);
+
+        displayNotes();
+    }
+
+
+    private void displayCourses(){
+        mRecyclerItems.setLayoutManager(mCourseLayoutManager);
+        mRecyclerItems.setAdapter(mCourseRecyclerAdapter);
+
+        //to set the clicked nav view menu item
+        selectNavigationMenuItem(R.id.nav_courses);
+    }
+    private void displayNotes() {
+        mRecyclerItems.setLayoutManager(mNotesLayoutManager);
+        mRecyclerItems.setAdapter(mNoteRecyclerAdapter);
+
+        //setting notes options checked in navigation view
+        selectNavigationMenuItem(R.id.nav_notes);
+
+    }
+
+    private void selectNavigationMenuItem(int id) {
+        NavigationView navigationView = findViewById(R.id.nav_view);
+
+        //getting reference to menu within navigation view
+        Menu menu  = navigationView.getMenu();
+        menu.findItem(id).setChecked(true);
     }
 
     @Override
@@ -116,13 +153,17 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
 
         switch(id){
             case R.id.nav_notes:
-                handleSelection("Notes");
+                displayNotes();
+                return true;
             case R.id.nav_courses:
-                handleSelection("Courses");
+                displayCourses();
+                return true;
             case R.id.nav_share:
                 handleSelection("Share");
+                return true;
             case R.id.nav_send:
                 handleSelection("Send");
+                return true;
         }
         //DrawerLayout drawer = findViewById(R.id.drawer_layout);
         //drawer.closeDrawer(GravityCompat.START);

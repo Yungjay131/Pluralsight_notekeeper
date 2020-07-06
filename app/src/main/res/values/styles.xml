@@ -16,4 +16,17 @@
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
+
+    <!--new style, Headline6 corresponds to 20sp-->
+    <style name="CourseTitle" parent="@style/TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textColor">@color/pluralsight_orange</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+
+    <!--style for FAB, widget is part of 'support library'-->
+    <style name="AddFAB" parent="@style/Widget.MaterialComponents.FloatingActionButton">
+        <item name="srcCompat">@drawable/ic_add_circle</item>
+        <item name="android:tint">@android:color/white</item>
+    </style>
 </resources>
