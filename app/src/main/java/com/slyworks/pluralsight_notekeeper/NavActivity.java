@@ -27,8 +27,6 @@ import java.util.List;
 
 public class NavActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
-    private AppBarConfiguration mAppBarConfiguration;
-
     private NoteRecyclerAdapter mNoteRecyclerAdapter;
 
     @Override
@@ -55,14 +53,6 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
 
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
-        mAppBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.nav_notes, R.id.nav_courses, R.id.nav_slideshow)
-                                       .setDrawerLayout(drawer)
-                                       .build();
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
-        NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
-        NavigationUI.setupWithNavController(navigationView, navController);
-
 
         initialiseDisplayContent();
     }
@@ -119,18 +109,10 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
         return true;
     }
 
-    @Override
-    public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
-        return NavigationUI.navigateUp(navController, mAppBarConfiguration)
-                       || super.onSupportNavigateUp();
-    }
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
       int id = menuItem.getItemId();
-      if(id == R.id.nav_notes)
-          handleSelection("Notes");
 
         switch(id){
             case R.id.nav_notes:
