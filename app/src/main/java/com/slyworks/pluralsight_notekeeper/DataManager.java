@@ -1,5 +1,14 @@
 package com.slyworks.pluralsight_notekeeper;
 
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract;
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.CourseInfoEntry;
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.NoteInfoEntry;
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperOpenHelper;
+
+import java.security.UnrecoverableEntryException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,10 +21,86 @@ public class DataManager {
     public static DataManager getInstance() {
         if(ourInstance == null) {
             ourInstance = new DataManager();
-            ourInstance.initializeCourses();
-            ourInstance.initializeExampleNotes();
+
+            //changes made 'cause its now being implemented from the database
+            //ourInstance.initializeCourses();
+            //ourInstance.initializeExampleNotes();
+
         }
         return ourInstance;
+    }
+
+    //loading from database
+    public static void loadFromDatabase(NoteKeeperOpenHelper dbHelper){
+        //opening connection
+        SQLiteDatabase sq_db = dbHelper.getReadableDatabase();
+
+        /*columns to get back*/
+        String[] columns = {CourseInfoEntry.COLUMN_COURSE_ID,
+                            CourseInfoEntry.COLUMN_COURSE_TITLE};
+
+        //to get the row data in a cursor and order alphabetically based on title column
+        Cursor courseCursor = sq_db.query(CourseInfoEntry.TABLE_NAME,columns,null,null,null,null,CourseInfoEntry.COLUMN_COURSE_TITLE /*+ " DESC"//for descending order instead*/ );
+        
+        //actually getting the values from the returned cursor
+         loadCoursesFromDatabase(courseCursor);
+
+        //querying for the notes
+        String[] columns2 = {NoteInfoEntry.COLUMN_NOTE_TITLE,
+                             NoteInfoEntry.COLUMN_NOTE_TEXT,
+                             NoteInfoEntry.COLUMN_COURSE_ID};
+
+        //specifying sortOrder
+        String noteOrderBy = NoteInfoEntry.COLUMN_COURSE_ID + ","+
+                             NoteInfoEntry.COLUMN_NOTE_TITLE;
+        Cursor noteCursor = sq_db.query(NoteInfoEntry.TABLE_NAME,columns2, null,null,null,null, noteOrderBy);
+
+        //actually loading the values from the returned Cursor
+        loadNotesFromDatabase(noteCursor);
+    }
+
+
+    private static void loadCoursesFromDatabase(Cursor cursor) {
+    int courseIDPos = cursor.getColumnIndex(CourseInfoEntry.COLUMN_COURSE_ID);
+    int courseTitlePos = cursor.getColumnIndex(CourseInfoEntry.COLUMN_COURSE_TITLE);
+
+    ///loading to the List,clearing if it already contains any values
+    DataManager dm = getInstance();
+    dm.mCourses.clear();
+
+    //remembering that Cursor position starts at -1
+        while(cursor.moveToNext()){
+            String courseID = cursor.getString(courseIDPos);
+            String courseTitle = cursor.getString(courseTitlePos);
+
+            CourseInfo courses = new CourseInfo(courseID, courseTitle, null);
+
+            dm.mCourses.add(courses);
+        }
+        cursor.close();
+    }
+
+
+    private static void loadNotesFromDatabase(Cursor cursor) {
+    int noteTitlePos = cursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TITLE);
+    int noteTextPos = cursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TEXT);
+    int courseIDPos = cursor.getColumnIndex(NoteInfoEntry.COLUMN_COURSE_ID);
+
+    DataManager dm  = getInstance();
+    dm.mNotes.clear();
+
+    while(cursor.moveToNext()){
+         String noteTitle = cursor.getString(noteTitlePos);
+         String noteText = cursor.getString(noteTextPos);
+         String courseID = cursor.getString(courseIDPos);
+
+         //to get the course that corresponds to the note
+        CourseInfo noteCourse = dm.getCourse(courseID);
+
+        NoteInfo  note = new NoteInfo(noteCourse, noteTitle, noteText);
+        dm.mNotes.add(note);
+    }
+    cursor.close();
     }
 
     public String getCurrentUserName() {

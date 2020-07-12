@@ -1,6 +1,7 @@
 package com.slyworks.pluralsight_notekeeper;
 
 import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -18,10 +19,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperOpenHelper;
 
 import java.util.List;
 
-public class NavActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private NoteRecyclerAdapter mNoteRecyclerAdapter;
     private RecyclerView mRecyclerItems;
@@ -29,6 +31,9 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
     private CourseRecyclerAdapter mCourseRecyclerAdapter;
     private GridLayoutManager mCourseLayoutManager;
 
+
+    //for the database
+    private NoteKeeperOpenHelper mDBOpenHelper;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,7 +46,7 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startActivity(new Intent(NavActivity.this, NoteActivity.class));
+                startActivity(new Intent(MainActivity.this, NoteActivity.class));
             }
         });
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -57,8 +62,8 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
         //setting the OnNavigationItemSelectedListener
         navigationView.setNavigationItemSelectedListener(this);
 
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
+        //for the database,(NB, its closed in the onDestroy())
+        mDBOpenHelper = new NoteKeeperOpenHelper(this);
 
         initialiseDisplayContent();
     }
@@ -96,7 +101,9 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
         });
          */
 
-        //new code using for using recyclerView
+        //new code using for using recyclerView and database
+        DataManager.loadFromDatabase(mDBOpenHelper);
+
         mRecyclerItems = findViewById(R.id.list_items);
 
         mNotesLayoutManager = new LinearLayoutManager(this );
@@ -125,6 +132,11 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
     private void displayNotes() {
         mRecyclerItems.setLayoutManager(mNotesLayoutManager);
         mRecyclerItems.setAdapter(mNoteRecyclerAdapter);
+
+
+        //adding database functionality
+        //checks if database exist(creates it if it doesn't) and returns a reference
+       //3 SQLiteDatabase db = mDBOpenHelper.getReadableDatabase();
 
         //setting notes options checked in navigation view
         selectNavigationMenuItem(R.id.nav_notes);
@@ -170,7 +182,22 @@ public class NavActivity extends AppCompatActivity implements NavigationView.OnN
         return true;
     }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if(item.getItemId() == R.id.action_settings)
+            startActivity(new Intent(this, SettingsActivity.class));
+
+        return true;
+    }
+
     private void handleSelection(String message) {
         Snackbar.make(findViewById(R.id.list_items), message, Snackbar.LENGTH_LONG).show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        //closing the database helper class instance connection
+        mDBOpenHelper.close();
+        super.onDestroy();
     }
 }

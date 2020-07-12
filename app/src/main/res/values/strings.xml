@@ -26,4 +26,43 @@
     <string name="title_activity_main4">MainActivity4</string>
     <string name="title_activity_main5">MainActivity5</string>
     <string name="title_nav_activity">Navigation Activity</string>
+    <string name="title_activity_settings">SettingsActivity</string>
+
+
+    <!-- Preference Titles -->
+    <string name="messages_header">Messages</string>
+    <string name="sync_header">Sync</string>
+
+    <!-- Messages Preferences -->
+    <string name="signature_title">Your signature</string>
+    <string name="reply_title">Default reply action</string>
+
+    <!-- Sync Preferences -->
+    <string name="sync_title">Sync email periodically</string>
+    <string name="attachment_title">Download incoming attachments</string>
+    <string name="attachment_summary_on">Automatically download attachments for incoming emails
+    </string>
+    <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name="pref_title_email_address">Email Address</string>
+    <string name="pref_display_name">Display Name</string>
+    <string name="pref_add_friends_to_message">Add Friends To Message</string>
+    <string name="pref_title_favorite_social_network">Favorite Social Network</string>
+
+    <!--creating Array of strings for entries in settingsActivity-->
+    <string-array name="pref_entries_favorite_social">
+        <item>Google+</item>
+        <item>Facebook</item>
+        <item>Twitter</item>
+
+        <!--todo:add for GitHub and StackOverFlow-->
+    </string-array>
+
+    <!--creating Array of strings for the URL(actual behind-the-scenes information) for each entry created-->
+    <string-array name="pref_values_favorite_social">
+        <item>https://plus.google.com</item>
+        <item>https://facebook.com</item>
+        <item>https://twitter.com</item>
+    </string-array>
+    <string name="pref_default_social">http://google.com</string>
+
 </resources>
