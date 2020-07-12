@@ -2,6 +2,7 @@ package com.slyworks.pluralsight_notekeeper;
 
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +11,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract;
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.NoteInfoEntry;
+
 import java.util.List;
 
 class NoteRecyclerAdapter extends RecyclerView.Adapter<NoteRecyclerAdapter.viewHolder> {
@@ -17,15 +21,43 @@ private final Context mContext;
     private final LayoutInflater mLayoutInflater;
 
     //Data structure for saving Notes
-    private final List<NoteInfo> mNotes;
+    //private final List<NoteInfo> mNotes;
+    private Cursor mCursor;
+    private int mCoursePos;
+    private int mNoteTitlePos;
+    private int mIDPos;
 
-    NoteRecyclerAdapter(Context context, List<NoteInfo> notes) {
+    NoteRecyclerAdapter(Context context, Cursor cursor) {
         mContext = context;
-        mNotes = notes;
+        mCursor = cursor;
 
         //LayoutInflater requires an Activity context for instantiation
         mLayoutInflater = LayoutInflater.from(mContext);
 
+        //database
+        populateColumnPositions();
+    }
+
+    private void populateColumnPositions() {
+        //checking if cursor is null
+        if(mCursor == null)
+            return;
+
+        //get column indexes from Cursor
+        mCoursePos = mCursor.getColumnIndex(NoteInfoEntry.COLUMN_COURSE_ID);
+        mNoteTitlePos = mCursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TITLE);
+        mIDPos = mCursor.getColumnIndex(NoteInfoEntry._ID);
+
+        //next step for diiplaying the database info in the onBindViewHolder
+    }
+
+    public void changeCursor(Cursor cursor){
+        if(mCursor != null)
+            mCursor.close();
+
+        mCursor = cursor;
+        populateColumnPositions();
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -38,18 +70,28 @@ private final Context mContext;
 
     @Override
     public void onBindViewHolder(@NonNull viewHolder holder, int position) {
-    NoteInfo note = mNotes.get(position);
+    //taking the cursor to the required object position
+    mCursor.moveToPosition(position);
 
-    holder.mTextCourse.setText(note.getCourse().getTitle());
-    holder.mTextTitle.setText(note.getTitle());
+    //getting the actual values corresponding to the postion
+    String course = mCursor.getString(mCoursePos);
+    String noteTitle = mCursor.getString(mNoteTitlePos);
+    int ID = mCursor.getInt(mIDPos);
+
+    holder.mTextCourse.setText(course);
+    holder.mTextTitle.setText(noteTitle);
 
     //setting the position of the note
-        holder.mCurrentPosition = position;
+     //holder.mID = position;
+
+     //using database
+     holder.mID = ID;
     }
 
     @Override
     public int getItemCount() {
-        return mNotes.size();
+        //return mNotes.size();
+        return mCursor == null ? 0 : mCursor.getCount();
     }
 
     //creating nested class for custom ViewHolder implementation
@@ -58,22 +100,22 @@ public class viewHolder extends RecyclerView.ViewHolder{
 //can access them
         public final TextView mTextCourse;
         public final TextView mTextTitle;
-        public int mCurrentPosition;
+        public int mID;
 
         public viewHolder(@NonNull View itemView) {
         super(itemView);
             mTextCourse = itemView.findViewById(R.id.text_course);
             mTextTitle = itemView.findViewById(R.id.text_title);
 
-            //creating click event for the entire body of the individual cardview
+            //creating click event for the entire body of the individual cardView
             //here in the constructor
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    //showing the NoteActivity class once the cardview is clicked
+                    //showing the NoteActivity class once the cardView is clicked
                     //and passing the position of the note as an IntentExtra
                     Intent intent = new Intent(mContext, NoteActivity.class);
-                    intent.putExtra(NoteActivity.NOTE_POSITION, mCurrentPosition);
+                    intent.putExtra(NoteActivity.NOTE_ID, mID);
                     mContext.startActivity(intent);
                 }
             });

@@ -46,14 +46,15 @@ public class DataManager {
          loadCoursesFromDatabase(courseCursor);
 
         //querying for the notes
-        String[] columns2 = {NoteInfoEntry.COLUMN_NOTE_TITLE,
+        String[] noteColumns = {NoteInfoEntry.COLUMN_NOTE_TITLE,
                              NoteInfoEntry.COLUMN_NOTE_TEXT,
-                             NoteInfoEntry.COLUMN_COURSE_ID};
+                             NoteInfoEntry.COLUMN_COURSE_ID,
+                             NoteInfoEntry._ID};
 
         //specifying sortOrder
         String noteOrderBy = NoteInfoEntry.COLUMN_COURSE_ID + ","+
                              NoteInfoEntry.COLUMN_NOTE_TITLE;
-        Cursor noteCursor = sq_db.query(NoteInfoEntry.TABLE_NAME,columns2, null,null,null,null, noteOrderBy);
+        Cursor noteCursor = sq_db.query(NoteInfoEntry.TABLE_NAME, noteColumns, null,null,null,null, noteOrderBy);
 
         //actually loading the values from the returned Cursor
         loadNotesFromDatabase(noteCursor);
@@ -85,6 +86,8 @@ public class DataManager {
     int noteTitlePos = cursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TITLE);
     int noteTextPos = cursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TEXT);
     int courseIDPos = cursor.getColumnIndex(NoteInfoEntry.COLUMN_COURSE_ID);
+    //to get the BaseColumns._ID
+    int IDPos = cursor.getColumnIndex(NoteInfoEntry._ID);
 
     DataManager dm  = getInstance();
     dm.mNotes.clear();
@@ -93,11 +96,13 @@ public class DataManager {
          String noteTitle = cursor.getString(noteTitlePos);
          String noteText = cursor.getString(noteTextPos);
          String courseID = cursor.getString(courseIDPos);
+         //for the BaseColumns._ID
+        int ID = cursor.getInt(IDPos);
 
          //to get the course that corresponds to the note
         CourseInfo noteCourse = dm.getCourse(courseID);
 
-        NoteInfo  note = new NoteInfo(noteCourse, noteTitle, noteText);
+        NoteInfo  note = new NoteInfo(ID, noteCourse, noteTitle, noteText);
         dm.mNotes.add(note);
     }
     cursor.close();

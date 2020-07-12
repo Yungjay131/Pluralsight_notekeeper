@@ -1,6 +1,7 @@
 package com.slyworks.pluralsight_notekeeper;
 
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.Menu;
@@ -19,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract;
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperOpenHelper;
 
 import java.util.List;
@@ -73,10 +75,26 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onResume() {
         super.onResume();
         //to handle creation of new notes,resetting the RecyclerAdapter to accommodate new information
-        mNoteRecyclerAdapter.notifyDataSetChanged();
+      //  mNoteRecyclerAdapter.notifyDataSetChanged();
 
+        loadNotes();
         //this is meant for working with small sets of data
         //larger data should use other methods
+    }
+
+    private void loadNotes() {
+       SQLiteDatabase sq_db =  mDBOpenHelper.getReadableDatabase();
+        //querying for the notes
+        String[] noteColumns = {NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_NOTE_TITLE,
+                NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_COURSE_ID,
+                NoteKeeperDatabaseContract.NoteInfoEntry._ID};
+
+        //specifying sortOrder
+        String noteOrderBy = NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_COURSE_ID + ","+
+                                     NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_NOTE_TITLE;
+        Cursor noteCursor = sq_db.query(NoteKeeperDatabaseContract.NoteInfoEntry.TABLE_NAME, noteColumns, null,null,null,null, noteOrderBy);
+
+        mNoteRecyclerAdapter.changeCursor(noteCursor);
     }
 
     private void  initialiseDisplayContent() {
@@ -110,8 +128,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         //layout manager for displaying courses i.e from nav_view click
         mCourseLayoutManager = new GridLayoutManager(this, 2);
 
-        List<NoteInfo> notes = DataManager.getInstance().getNotes();
-        mNoteRecyclerAdapter = new NoteRecyclerAdapter(this, notes);
+
+        mNoteRecyclerAdapter = new NoteRecyclerAdapter(this, null);
 
 
         //adding code to display courses
@@ -136,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         //adding database functionality
         //checks if database exist(creates it if it doesn't) and returns a reference
-       //3 SQLiteDatabase db = mDBOpenHelper.getReadableDatabase();
+       // SQLiteDatabase db = mDBOpenHelper.getReadableDatabase();
 
         //setting notes options checked in navigation view
         selectNavigationMenuItem(R.id.nav_notes);

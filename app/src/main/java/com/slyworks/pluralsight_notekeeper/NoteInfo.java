@@ -7,12 +7,20 @@ public final class NoteInfo implements Parcelable {
     private CourseInfo mCourse;
     private String mTitle;
     private String mText;
+    private int mID;
 
-    public NoteInfo(CourseInfo course, String title, String text) {
+    //overloaded constructor for database work
+    public NoteInfo(int id, CourseInfo course, String title, String text) {
         mCourse = course;
         mTitle = title;
         mText = text;
-    }
+        mID  = id;    }
+
+    public NoteInfo( CourseInfo course, String title, String text) {
+        mCourse = course;
+        mTitle = title;
+        mText = text;
+            }
 
     protected NoteInfo(Parcel in) {
         mCourse = in.readParcelable(CourseInfo.class.getClassLoader());
@@ -51,6 +59,9 @@ public final class NoteInfo implements Parcelable {
         }
     };
 
+    public int getId() {
+        return mID;
+    }
     public CourseInfo getCourse() {
         return mCourse;
     }

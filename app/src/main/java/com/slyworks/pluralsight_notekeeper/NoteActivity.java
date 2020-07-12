@@ -9,6 +9,7 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.cursoradapter.widget.SimpleCursorAdapter;
 import androidx.lifecycle.ViewModelProvider;
 
 import android.view.Menu;
@@ -18,6 +19,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract;
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.CourseInfoEntry;
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.NoteInfoEntry;
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperOpenHelper;
 
@@ -28,7 +30,7 @@ public class NoteActivity extends AppCompatActivity {
 //using package name as prefix to make identifier unique
     public static final String NOTE_POSITION = "com.slyworks.pluralsight_notekeeper.NOTE_INFO";
     public static final int POSITION_NOT_SET = -1;
-    private NoteInfo mNote;
+    private NoteInfo mNote = new NoteInfo(DataManager.getInstance().getCourses().get(0), "", "");;
     private boolean mIsNewNote;
     private Spinner mSpinnerCourses;
     private EditText mTextNoteTitle;
@@ -45,6 +47,11 @@ public class NoteActivity extends AppCompatActivity {
     private int mCourseIDPos;
     private int mNoteTitlePos;
     private int mNoteTextPos;
+
+    public static final int ID_NOT_SET = -1;
+    public static final String NOTE_ID = "com.slyworks.pluralsight_notekeeper.NOTE_ID";
+    public static int mNoteID;
+    private SimpleCursorAdapter mAdapterCourses;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,29 +90,52 @@ public class NoteActivity extends AppCompatActivity {
 
         mSpinnerCourses = findViewById(R.id.spinner_courses);
 
-        List<CourseInfo> courses = DataManager.getInstance().getCourses();
-        ArrayAdapter<CourseInfo> adapterCourses = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item,courses);
-        adapterCourses.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        mSpinnerCourses.setAdapter(adapterCourses);
+        //editing for database implementation
+        //assigning databaseOpenHelper Object
+        mDBOpenHelper = new NoteKeeperOpenHelper(this);
 
-        //method to receive intent extras from NoteListActivity
+        //List<CourseInfo> courses = DataManager.getInstance().getCourses();
+        //ArrayAdapter<CourseInfo> adapterCourses = new ArrayAdapter<>(this,
+         //       android.R.layout.simple_spinner_item,courses);
+
+        mAdapterCourses = new SimpleCursorAdapter(this, android.R.layout.simple_spinner_item,null,
+                               new String[]{CourseInfoEntry.COLUMN_COURSE_TITLE},
+                               new int[]{android.R.id.text1},0);
+        mAdapterCourses.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mSpinnerCourses.setAdapter(mAdapterCourses);
+        //loading data to the spinner
+        loadCourseData();
         
+        //method to receive intent extras from NoteListActivity
         ReadDisplayStateValues();
-        saveOriginalNoteValues();
+
+        //saveOriginalNoteValues();
 
         mTextNoteTitle = findViewById(R.id.text_note_title);
         mTextNoteText = findViewById(R.id.text_note_text);
 
 
-        //assigning databaseOpenHelper Object
-        mDBOpenHelper = new NoteKeeperOpenHelper(this);
 
         if(!mIsNewNote)
         //displayNote();
         //now loading from database
             loadNoteData();
 
+    }
+
+    private void loadCourseData() {
+        SQLiteDatabase sq_db = mDBOpenHelper.getReadableDatabase();
+        String[] courseColumns = {
+                CourseInfoEntry.COLUMN_COURSE_TITLE,
+                CourseInfoEntry.COLUMN_COURSE_ID,
+                CourseInfoEntry._ID//uniquely identifies rows in a table
+        };
+
+        Cursor cursor = sq_db.query(CourseInfoEntry.TABLE_NAME, courseColumns,
+                        null, null, null, null,CourseInfoEntry.COLUMN_COURSE_TITLE);//as the ordering column
+
+        //associating adapter with this cursor
+        mAdapterCourses.changeCursor(cursor);
     }
 
     private void loadNoteData() {
@@ -115,9 +145,9 @@ public class NoteActivity extends AppCompatActivity {
         String courseID = "android_intents";
         String titleStart = "dynamic";
 
-        String selection = NoteInfoEntry.COLUMN_COURSE_ID+ " = ? AND "
-                + NoteInfoEntry.COLUMN_NOTE_TITLE + " LIKE ?";
-        String[] selectionArgs  = {courseID, titleStart + "%"};
+        //now setting the selection to general
+        String selection = NoteInfoEntry._ID+ " = ?";
+        String[] selectionArgs  = {Integer.toString(mNoteID)};
 
         String[] noteColumns = {
                 NoteInfoEntry.COLUMN_COURSE_ID,
@@ -155,11 +185,11 @@ public class NoteActivity extends AppCompatActivity {
         String noteText = mNoteCursor.getString(mNoteTextPos);
 
 
-        List<CourseInfo> courses = DataManager.getInstance().getCourses();
-
         //implementing database way
-        CourseInfo course = DataManager.getInstance().getCourse(courseID);
-        int courseIndex = courses.indexOf(/*mNote.getCourse()*/course);
+        //List<CourseInfo> courses = DataManager.getInstance().getCourses();
+        //CourseInfo course = DataManager.getInstance().getCourse(courseID);
+
+        int courseIndex = getIndexOfCourseId(courseID);
 
         //setting the spinner to display the selected note
         mSpinnerCourses.setSelection(courseIndex);
@@ -172,24 +202,50 @@ public class NoteActivity extends AppCompatActivity {
         mTextNoteText.setText(noteText);
     }
 
+    private int getIndexOfCourseId(String courseID) {
+        Cursor cursor = mAdapterCourses.getCursor();
+        int courseIDPos = cursor.getColumnIndex(CourseInfoEntry.COLUMN_COURSE_ID);
+
+        //to get row Index which is what we actually need
+        int courseRowIndex = 0;
+
+       boolean more = cursor.moveToFirst();
+       while(more){
+           //looping through the loop until the required row is found
+           String cursorCourseID = cursor.getString(courseIDPos);
+           if(courseID.equals(cursorCourseID))
+               //meaning the required row is found
+               break;
+
+           courseRowIndex++;
+           more = cursor.moveToNext();
+       }
+       return courseRowIndex;
+    }
+
     private void ReadDisplayStateValues() {
-        Intent intent = getIntent();
+
         //reference to contain note selected in NoteListActivity
         //,the note's title,course, name were passed as Parcelable IntentExtras
 
         //mNote = intent.getParcelableExtra(NOTE_POSITION);
 
-        int position = intent.getIntExtra(NOTE_POSITION, POSITION_NOT_SET);
+        //int position = intent.getIntExtra(NOTE_POSITION, POSITION_NOT_SET);
 
+        //adding database implementation
         //checking if its a new note being created
-        mIsNewNote = position == POSITION_NOT_SET;
+        Intent intent = getIntent();
+        mNoteID = intent.getIntExtra(NOTE_ID, ID_NOT_SET);
+        mIsNewNote = mNoteID == ID_NOT_SET;
 
         if(mIsNewNote){
             createNewNote();
-        }else{
-            mNote = DataManager.getInstance().getNotes().get(position);
-            mNotePosition = position;
         }
+        //else{
+            //no longer needed 'cause of database
+            //mNote = DataManager.getInstance().getNotes().get(mNoteID);
+            //mNotePosition = mNoteID;
+        //}
     }
 
     private void createNewNote() {
@@ -333,7 +389,7 @@ public class NoteActivity extends AppCompatActivity {
     }
 
     private void saveNote() {
-        mNote.setCourse((CourseInfo) mSpinnerCourses.getSelectedItem());
+       // mNote.setCourse((CourseInfo) mSpinnerCourses.getSelectedItem());
         mNote.setTitle(mTextNoteTitle.getText().toString());
         mNote.setText(mTextNoteText.getText().toString());
 
