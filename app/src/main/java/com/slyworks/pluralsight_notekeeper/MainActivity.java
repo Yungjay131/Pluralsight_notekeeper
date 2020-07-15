@@ -1,6 +1,10 @@
 package com.slyworks.pluralsight_notekeeper;
 
+import android.annotation.SuppressLint;
+import android.app.LoaderManager;
+import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.Loader;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -25,7 +29,8 @@ import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperOpenHelper;
 
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener,
+                                                                       LoaderManager.LoaderCallbacks<Cursor> {
 
     private NoteRecyclerAdapter mNoteRecyclerAdapter;
     private RecyclerView mRecyclerItems;
@@ -36,6 +41,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     //for the database
     private NoteKeeperOpenHelper mDBOpenHelper;
+    public static final int LOADER_NOTES = 0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -77,7 +83,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         //to handle creation of new notes,resetting the RecyclerAdapter to accommodate new information
       //  mNoteRecyclerAdapter.notifyDataSetChanged();
 
-        loadNotes();
+        //loadNotes();
+
+        //requerying the database everytime the activity is resumed
+        getLoaderManager().restartLoader(LOADER_NOTES, null, this);
+
+
         //this is meant for working with small sets of data
         //larger data should use other methods
     }
@@ -217,5 +228,55 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         //closing the database helper class instance connection
         mDBOpenHelper.close();
         super.onDestroy();
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        CursorLoader loader = null;
+        if(id == LOADER_NOTES){
+            loader = new CursorLoader(this){
+                @Override
+                public Cursor loadInBackground() {
+                    SQLiteDatabase sq_db = mDBOpenHelper.getReadableDatabase();
+                    final String[] noteColumns = {
+                           // NoteKeeperDatabaseContract.NoteInfoEntry._ID,//fully qualifying the name and is done for
+                           //row that have values in the 2 tables
+                           //a lot of the other work is done in the NoteRecyclerAdapter
+
+                            NoteKeeperDatabaseContract.NoteInfoEntry.getQName(NoteKeeperDatabaseContract.NoteInfoEntry._ID),
+                            NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_NOTE_TITLE,
+                            NoteKeeperDatabaseContract.CourseInfoEntry.COLUMN_COURSE_TITLE
+                    };
+
+                    final String noteOrderBy = NoteKeeperDatabaseContract.CourseInfoEntry.COLUMN_COURSE_TITLE +
+                                                       ","+ NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_NOTE_TITLE;
+
+                    //joining the 2 rows together something like
+                    //note_info JOIN course_info ON note_info.course_id = course_info.course_id
+                    String tablesWithJoin = NoteKeeperDatabaseContract.NoteInfoEntry.TABLE_NAME + " JOIN " + NoteKeeperDatabaseContract.CourseInfoEntry.TABLE_NAME
+                                                    + " ON " + NoteKeeperDatabaseContract.NoteInfoEntry.getQName(NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_COURSE_ID)+" = "+
+                    NoteKeeperDatabaseContract.CourseInfoEntry.getQName(NoteKeeperDatabaseContract.CourseInfoEntry.COLUMN_COURSE_ID);
+
+                    return sq_db.query(/*NoteKeeperDatabaseContract.NoteInfoEntry.TABLE_NAME*/tablesWithJoin,
+                            noteColumns,null,null,null,null, noteOrderBy);
+                }
+            };
+        }
+        return loader;
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+  if(loader.getId() == LOADER_NOTES){
+      mNoteRecyclerAdapter.changeCursor(data);
+  }
+ }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+ if(loader.getId() == LOADER_NOTES){
+     mNoteRecyclerAdapter.changeCursor(null);
+ }
     }
 }

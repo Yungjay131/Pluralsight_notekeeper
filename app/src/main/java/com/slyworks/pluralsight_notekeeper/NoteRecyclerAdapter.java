@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract;
+import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.CourseInfoEntry;
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.NoteInfoEntry;
 
 import java.util.List;
@@ -22,6 +23,7 @@ private final Context mContext;
 
     //Data structure for saving Notes
     //private final List<NoteInfo> mNotes;
+
     private Cursor mCursor;
     private int mCoursePos;
     private int mNoteTitlePos;
@@ -44,11 +46,12 @@ private final Context mContext;
             return;
 
         //get column indexes from Cursor
-        mCoursePos = mCursor.getColumnIndex(NoteInfoEntry.COLUMN_COURSE_ID);
+        //fixing up to display note title
+        mCoursePos = mCursor.getColumnIndex(CourseInfoEntry.COLUMN_COURSE_TITLE);
         mNoteTitlePos = mCursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TITLE);
         mIDPos = mCursor.getColumnIndex(NoteInfoEntry._ID);
 
-        //next step for diiplaying the database info in the onBindViewHolder
+        //next step for displaying the database info in the onBindViewHolder
     }
 
     public void changeCursor(Cursor cursor){

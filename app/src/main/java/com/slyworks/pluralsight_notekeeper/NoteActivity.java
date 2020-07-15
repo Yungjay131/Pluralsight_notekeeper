@@ -1,6 +1,10 @@
 package com.slyworks.pluralsight_notekeeper;
 
+import android.annotation.SuppressLint;
+import android.app.LoaderManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.Loader;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -25,11 +29,16 @@ import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperOpenHelper;
 
 import java.util.List;
 
-public class NoteActivity extends AppCompatActivity {
+import android.app.LoaderManager;
+import android.content.CursorLoader;
+
+public class NoteActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>{
 //creating constant to receive intentExtras from NoteListActivity
 //using package name as prefix to make identifier unique
     public static final String NOTE_POSITION = "com.slyworks.pluralsight_notekeeper.NOTE_INFO";
     public static final int POSITION_NOT_SET = -1;
+    public static final int LOADER_NOTES = 0;
+    public static final int LOADER_COURSES = 1;
     private NoteInfo mNote = new NoteInfo(DataManager.getInstance().getCourses().get(0), "", "");;
     private boolean mIsNewNote;
     private Spinner mSpinnerCourses;
@@ -51,7 +60,10 @@ public class NoteActivity extends AppCompatActivity {
     public static final int ID_NOT_SET = -1;
     public static final String NOTE_ID = "com.slyworks.pluralsight_notekeeper.NOTE_ID";
     public static int mNoteID;
+
     private SimpleCursorAdapter mAdapterCourses;
+    private boolean mCourseQueryFinished;
+    private boolean mNoteQueryFinished;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,8 +116,9 @@ public class NoteActivity extends AppCompatActivity {
         mAdapterCourses.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mSpinnerCourses.setAdapter(mAdapterCourses);
         //loading data to the spinner
-        loadCourseData();
-        
+        //loadCourseData();
+        getLoaderManager().initLoader(LOADER_COURSES,null,this);
+
         //method to receive intent extras from NoteListActivity
         ReadDisplayStateValues();
 
@@ -119,7 +132,8 @@ public class NoteActivity extends AppCompatActivity {
         if(!mIsNewNote)
         //displayNote();
         //now loading from database
-            loadNoteData();
+           // loadNoteData();
+            getLoaderManager().initLoader(LOADER_NOTES,null,this);
 
     }
 
@@ -156,9 +170,8 @@ public class NoteActivity extends AppCompatActivity {
         };
 
         mNoteCursor = sq_db.query(NoteInfoEntry.TABLE_NAME,
-                            noteColumns, selection, selectionArgs,
-                           null, null, null);
-
+                noteColumns, selection, selectionArgs,
+                null, null, null);
         mCourseIDPos = mNoteCursor.getColumnIndex(NoteInfoEntry.COLUMN_COURSE_ID);
         mNoteTitlePos = mNoteCursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TITLE);
         mNoteTextPos = mNoteCursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TEXT);
@@ -421,5 +434,149 @@ public class NoteActivity extends AppCompatActivity {
         //closing DatabaseOpenHelper object
         mDBOpenHelper.close();
         super.onDestroy();
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        CursorLoader loader = null;
+        if(id == LOADER_NOTES)
+            loader = createLoaderNotes();
+        else if(id == LOADER_COURSES)
+            loader = createLoaderCourses();
+          return loader;
+    }
+
+    @SuppressLint("StaticFieldLeak")
+    private CursorLoader createLoaderCourses() {
+        //adding flag to know when the 'other' loading is done
+        mCourseQueryFinished = false;
+
+         return new CursorLoader(this){
+             @Override
+             public Cursor loadInBackground() {
+                 SQLiteDatabase sq_db = mDBOpenHelper.getReadableDatabase();
+                 String[] courseColumns = {
+                         CourseInfoEntry.COLUMN_COURSE_TITLE,
+                         CourseInfoEntry.COLUMN_COURSE_ID,
+                         CourseInfoEntry._ID//uniquely identifies rows in a table
+                 };
+
+
+                return sq_db.query(CourseInfoEntry.TABLE_NAME, courseColumns,
+                         null, null, null, null,CourseInfoEntry.COLUMN_COURSE_TITLE);//as the ordering column
+
+             }
+         };
+    }
+
+
+    @SuppressLint("StaticFieldLeak")
+    private CursorLoader createLoaderNotes() {
+        //boolean flag to know exactly when the loading is done
+        mNoteQueryFinished = false;
+
+        return new mCursorLoader(this){
+            @SuppressLint("StaticFieldLeak")
+            @Override
+            public Cursor loadInBackground() {
+                SQLiteDatabase sq_db = mDBOpenHelper.getReadableDatabase();
+
+
+                //assuming i'm always finding the same note
+                String courseID = "android_intents";
+                String titleStart = "dynamic";
+
+                //now setting the selection to general
+                String selection = NoteInfoEntry._ID+ " = ?";
+                String[] selectionArgs  = {Integer.toString(mNoteID)};
+
+                String[] noteColumns = {
+                        NoteInfoEntry.COLUMN_COURSE_ID,
+                        NoteInfoEntry.COLUMN_NOTE_TITLE,
+                        NoteInfoEntry.COLUMN_NOTE_TEXT
+                };
+
+                return sq_db.query(NoteInfoEntry.TABLE_NAME,
+                        noteColumns, selection, selectionArgs,
+                        null, null, null);
+            }
+        };
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+ //for when the results are returned
+        if(loader.getId()==LOADER_NOTES){
+            loadFinishedNotes(data);
+        }else if(loader.getId() == LOADER_COURSES){
+            mAdapterCourses.changeCursor(data);
+            mCourseQueryFinished = true;
+            displayNoteWhenQueriesFinished();
+        }
+    }
+
+    private void loadFinishedNotes(Cursor data) {
+        mNoteCursor = data;
+        mCourseIDPos = mNoteCursor.getColumnIndex(NoteInfoEntry.COLUMN_COURSE_ID);
+        mNoteTitlePos = mNoteCursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TITLE);
+        mNoteTextPos = mNoteCursor.getColumnIndex(NoteInfoEntry.COLUMN_NOTE_TEXT);
+
+        //since Cursor object start at -1
+        mNoteCursor.moveToNext();//now at 0
+
+        //setting the boolean flag
+        mNoteQueryFinished = true;
+
+        //called from 2 places to ensure that at one of the 2 points the loading would be done
+        displayNoteWhenQueriesFinished();
+    }
+
+    private void displayNoteWhenQueriesFinished() {
+   if(mNoteQueryFinished && mCourseQueryFinished)
+       displayNote();
+
+    }
+
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+       if(loader.getId() == LOADER_NOTES){
+           if(mNoteCursor != null)
+              mNoteCursor.close();
+       }else if(loader.getId() == LOADER_COURSES){
+           mAdapterCourses.changeCursor(null);
+       }
+    }
+
+    //nested class
+    public static class mCursorLoader extends CursorLoader{
+
+        public mCursorLoader(Context context) {
+            super(context);
+        }
+
+        @Override
+        public Cursor loadInBackground() {
+            NoteActivity mNoteActivity = new NoteActivity();
+            SQLiteDatabase sq_db = mNoteActivity.mDBOpenHelper.getReadableDatabase();
+
+            //assuming i'm always finding the same note
+            String courseID = "android_intents";
+            String titleStart = "dynamic";
+
+            //now setting the selection to general
+            String selection = NoteInfoEntry._ID+ " = ?";
+            String[] selectionArgs  = {Integer.toString(mNoteID)};
+
+            String[] noteColumns = {
+                    NoteInfoEntry.COLUMN_COURSE_ID,
+                    NoteInfoEntry.COLUMN_NOTE_TITLE,
+                    NoteInfoEntry.COLUMN_NOTE_TEXT
+            };
+
+            return sq_db.query(NoteInfoEntry.TABLE_NAME,
+                    noteColumns, selection, selectionArgs,
+                    null, null, null);
+        }
     }
 }
