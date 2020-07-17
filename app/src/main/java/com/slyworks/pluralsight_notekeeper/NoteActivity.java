@@ -2,11 +2,14 @@ package com.slyworks.pluralsight_notekeeper;
 
 import android.annotation.SuppressLint;
 import android.app.LoaderManager;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 
 
@@ -117,6 +120,7 @@ public class NoteActivity extends AppCompatActivity implements LoaderManager.Loa
         mSpinnerCourses.setAdapter(mAdapterCourses);
         //loading data to the spinner
         //loadCourseData();
+
         getLoaderManager().initLoader(LOADER_COURSES,null,this);
 
         //method to receive intent extras from NoteListActivity
@@ -262,9 +266,22 @@ public class NoteActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     private void createNewNote() {
-        DataManager dm = DataManager.getInstance();
-        mNotePosition = dm.createNewNote();
-        mNote = dm.getNotes().get(mNotePosition);
+        //DataManager dm = DataManager.getInstance();
+        //mNotePosition = dm.createNewNote();
+       //mNote = dm.getNotes().get(mNotePosition);
+
+        //changing to use database for saving, the concept here is that
+        //once the FAB is clicked a new row with empty column is created
+        //and on saving the row is updated with the new(correct) values
+        ContentValues values = new ContentValues();
+        values.put(NoteInfoEntry.COLUMN_COURSE_ID,"");
+        values.put(NoteInfoEntry.COLUMN_NOTE_TITLE,"");
+        values.put(NoteInfoEntry.COLUMN_NOTE_TEXT, "");
+
+        SQLiteDatabase sq_db = mDBOpenHelper.getWritableDatabase();
+        //returns row ID
+       mNoteID = (int) sq_db.insert(NoteInfoEntry.TABLE_NAME, null, values);
+
     }
 
     @Override
@@ -374,8 +391,13 @@ public class NoteActivity extends AppCompatActivity implements LoaderManager.Loa
         super.onPause();
         if(mIsCancelling){
             if(mIsNewNote)
-                DataManager.getInstance().removeNote(mNotePosition);
-            else
+                //switching to database
+                //DataManager.getInstance().removeNote(mNotePosition);
+
+            //situation where User created note but is leaving without saving the note
+            //deleting the backingStore(empty row inserted) for the would-hav-been entry
+                deleteNoteFromDatabase();
+                else
                 storePreviousNoteValues();
         }
          else{
@@ -383,6 +405,23 @@ public class NoteActivity extends AppCompatActivity implements LoaderManager.Loa
         }
 
     }
+
+    @SuppressLint("StaticFieldLeak")
+    private void deleteNoteFromDatabase() {
+        final String selection = NoteInfoEntry._ID + " = ?";
+        final String[] selectionArgs = {Integer.toString(mNoteID)};
+
+        //adding a bit of Threading to run tasks in background
+        AsyncTask task = new AsyncTask() {
+            @Override
+            protected Object doInBackground(Object[] objects) {
+                SQLiteDatabase sq_db = mDBOpenHelper.getWritableDatabase();
+                sq_db.delete(NoteInfoEntry.TABLE_NAME,selection,selectionArgs);
+                return null;
+            }
+    };
+        task.execute();
+}
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
@@ -403,12 +442,44 @@ public class NoteActivity extends AppCompatActivity implements LoaderManager.Loa
 
     private void saveNote() {
        // mNote.setCourse((CourseInfo) mSpinnerCourses.getSelectedItem());
-        mNote.setTitle(mTextNoteTitle.getText().toString());
-        mNote.setText(mTextNoteText.getText().toString());
+        //mNote.setTitle(mTextNoteTitle.getText().toString());
+        //mNote.setText(mTextNoteText.getText().toString());
 
-        //in case it was a new note being created
+        //switching to database
+        String courseID = selectedCourseID();
+        String noteTitle = mTextNoteTitle.getText().toString();
+        String noteText = mTextNoteText.getText().toString();
+
+        //courseID is in a spinner
+        saveNoteToDatabase(courseID, noteTitle, noteText);
     }
 
+    private String selectedCourseID() {
+        //courseId corresponding to the one selected in the spinner
+        int selectedPosition  = mSpinnerCourses.getSelectedItemPosition();
+        Cursor cursor = mAdapterCourses.getCursor();
+        cursor.moveToPosition(selectedPosition);
+
+        //reading data from the cursor
+        int courseIDPos = cursor.getColumnIndex(CourseInfoEntry.COLUMN_COURSE_ID);
+        String courseID = cursor.getString(courseIDPos);
+
+        return courseID;
+    }
+
+    //for database updating of entries
+    public void  saveNoteToDatabase(String courseID, String noteTitle, String noteText){
+        String selection = NoteInfoEntry._ID+" = ?";
+        String[] selectionArgs = {Integer.toString(mNoteID)};
+
+        ContentValues values = new ContentValues();
+        values.put(NoteInfoEntry.COLUMN_COURSE_ID, courseID );
+        values.put(NoteInfoEntry.COLUMN_NOTE_TITLE, noteTitle );
+        values.put(NoteInfoEntry.COLUMN_NOTE_TEXT, noteText );
+
+        SQLiteDatabase sq_db = mDBOpenHelper.getWritableDatabase();
+        sq_db.update(NoteInfoEntry.TABLE_NAME, values, selection, selectionArgs);
+    }
     private void sendEmail() {
         //method for sending a Note as an Email
         //with the Note's title as the Subject of the mail
@@ -451,22 +522,16 @@ public class NoteActivity extends AppCompatActivity implements LoaderManager.Loa
         //adding flag to know when the 'other' loading is done
         mCourseQueryFinished = false;
 
-         return new CursorLoader(this){
-             @Override
-             public Cursor loadInBackground() {
-                 SQLiteDatabase sq_db = mDBOpenHelper.getReadableDatabase();
-                 String[] courseColumns = {
-                         CourseInfoEntry.COLUMN_COURSE_TITLE,
-                         CourseInfoEntry.COLUMN_COURSE_ID,
-                         CourseInfoEntry._ID//uniquely identifies rows in a table
-                 };
+        //migrating app to make use of ContentProvider
+        //providing authority for the ContentProvider
+        Uri uri = Uri.parse("content://com.slyworks.pluralsight_notekeeper.provider");
+        String[] courseColumns = {
+                CourseInfoEntry.COLUMN_COURSE_TITLE,
+                CourseInfoEntry.COLUMN_COURSE_ID,
+                CourseInfoEntry._ID//uniquely identifies rows in a table
+        };
+        return new CursorLoader(this, uri, courseColumns,null,null, CourseInfoEntry.COLUMN_COURSE_TITLE);
 
-
-                return sq_db.query(CourseInfoEntry.TABLE_NAME, courseColumns,
-                         null, null, null, null,CourseInfoEntry.COLUMN_COURSE_TITLE);//as the ordering column
-
-             }
-         };
     }
 
 

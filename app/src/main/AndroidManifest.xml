@@ -11,7 +11,8 @@
         android:theme="@style/AppTheme">
         <activity
             android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings"></activity>
+            android:label="@string/title_activity_settings" />
+
         <activity
             android:name=".MainActivity"
             android:label="@string/title_nav_activity"
@@ -25,11 +26,18 @@
         <activity
             android:name=".NoteListActivity"
             android:label="@string/app_name"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".NoteActivity"
             android:label="@string/title_activity_note"
             android:theme="@style/AppTheme.NoActionBar" />
+
+        <provider
+            android:name=".NoteKeeperContentProvider"
+            android:authorities="com.slyworks.pluralsight_notekeeper.provider"
+            android:enabled="true"
+            android:exported="true">
+        </provider>
     </application>
 
 </manifest>
