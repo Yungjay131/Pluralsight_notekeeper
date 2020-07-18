@@ -241,15 +241,20 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                            //row that have values in the 2 tables
                            //a lot of the other work is done in the NoteRecyclerAdapter
 
-                            NoteKeeperDatabaseContract.NoteInfoEntry.getQName(NoteKeeperDatabaseContract.NoteInfoEntry._ID),
-                            NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_NOTE_TITLE,
-                            NoteKeeperDatabaseContract.CourseInfoEntry.COLUMN_COURSE_TITLE
+                            //NoteKeeperDatabaseContract.NoteInfoEntry.getQName(NoteKeeperDatabaseContract.NoteInfoEntry._ID),
+                            NoteKeeperProviderContract.Notes._ID,
+                            NoteKeeperProviderContract.Notes.COLUMN_NOTE_TITLE,
+                            NoteKeeperProviderContract.Notes.COLUMN_COURSE_TITLE
                     };
 
-                    final String noteOrderBy = NoteKeeperDatabaseContract.CourseInfoEntry.COLUMN_COURSE_TITLE +
-                                                       ","+ NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_NOTE_TITLE;
+                    final String noteOrderBy = NoteKeeperProviderContract.Notes.COLUMN_COURSE_TITLE +
+                                                       ", "+ NoteKeeperProviderContract.Notes.COLUMN_NOTE_TITLE;
+
+                 loader = new CursorLoader(this, NoteKeeperProviderContract.Notes.CONTENT_EXPANDED_URI, noteColumns,
+                            null, null, noteOrderBy) ;
         }
         return loader;
+        //old details are in remote branch
     }
 
     @Override
