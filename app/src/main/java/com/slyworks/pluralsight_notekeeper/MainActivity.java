@@ -235,10 +235,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         CursorLoader loader = null;
         if(id == LOADER_NOTES){
-            loader = new CursorLoader(this){
-                @Override
-                public Cursor loadInBackground() {
-                    SQLiteDatabase sq_db = mDBOpenHelper.getReadableDatabase();
+
                     final String[] noteColumns = {
                            // NoteKeeperDatabaseContract.NoteInfoEntry._ID,//fully qualifying the name and is done for
                            //row that have values in the 2 tables
@@ -251,17 +248,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
                     final String noteOrderBy = NoteKeeperDatabaseContract.CourseInfoEntry.COLUMN_COURSE_TITLE +
                                                        ","+ NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_NOTE_TITLE;
-
-                    //joining the 2 rows together something like
-                    //note_info JOIN course_info ON note_info.course_id = course_info.course_id
-                    String tablesWithJoin = NoteKeeperDatabaseContract.NoteInfoEntry.TABLE_NAME + " JOIN " + NoteKeeperDatabaseContract.CourseInfoEntry.TABLE_NAME
-                                                    + " ON " + NoteKeeperDatabaseContract.NoteInfoEntry.getQName(NoteKeeperDatabaseContract.NoteInfoEntry.COLUMN_COURSE_ID)+" = "+
-                    NoteKeeperDatabaseContract.CourseInfoEntry.getQName(NoteKeeperDatabaseContract.CourseInfoEntry.COLUMN_COURSE_ID);
-
-                    return sq_db.query(/*NoteKeeperDatabaseContract.NoteInfoEntry.TABLE_NAME*/tablesWithJoin,
-                            noteColumns,null,null,null,null, noteOrderBy);
-                }
-            };
         }
         return loader;
     }
