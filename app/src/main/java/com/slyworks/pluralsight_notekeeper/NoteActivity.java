@@ -29,6 +29,7 @@ import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract;
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.CourseInfoEntry;
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperDatabaseContract.NoteInfoEntry;
 import com.slyworks.pluralsight_notekeeper.Database.NoteKeeperOpenHelper;
+import com.slyworks.pluralsight_notekeeper.NoteKeeperProviderContract.Courses;
 
 import java.util.List;
 
@@ -524,13 +525,17 @@ public class NoteActivity extends AppCompatActivity implements LoaderManager.Loa
 
         //migrating app to make use of ContentProvider
         //providing authority for the ContentProvider
-        Uri uri = Uri.parse("content://com.slyworks.pluralsight_notekeeper.provider");
+        //Uri uri = Uri.parse("content://com.slyworks.pluralsight_notekeeper.provider");
+
+        Uri uri = Courses.CONTENT_URI;
+
+
         String[] courseColumns = {
-                CourseInfoEntry.COLUMN_COURSE_TITLE,
-                CourseInfoEntry.COLUMN_COURSE_ID,
-                CourseInfoEntry._ID//uniquely identifies rows in a table
+                Courses.COLUMN_COURSE_TITLE,
+                Courses.COLUMN_COURSE_ID,
+                Courses._ID//uniquely identifies rows in a table
         };
-        return new CursorLoader(this, uri, courseColumns,null,null, CourseInfoEntry.COLUMN_COURSE_TITLE);
+        return new CursorLoader(this, uri, courseColumns,null,null, Courses.COLUMN_COURSE_TITLE);
 
     }
 
