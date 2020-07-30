@@ -65,18 +65,18 @@ private final Context mContext;
 
     @NonNull
     @Override
-    public viewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public viewHolder onCreateViewHolder( ViewGroup parent, int viewType) {
      View itemView = mLayoutInflater.inflate(R.layout.item_note_list, parent, false);
 
      return new viewHolder(itemView);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull viewHolder holder, int position) {
+    public void onBindViewHolder( viewHolder holder, int position) {
     //taking the cursor to the required object position
     mCursor.moveToPosition(position);
 
-    //getting the actual values corresponding to the postion
+    //getting the actual values corresponding to the position
     String course = mCursor.getString(mCoursePos);
     String noteTitle = mCursor.getString(mNoteTitlePos);
     int ID = mCursor.getInt(mIDPos);

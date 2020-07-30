@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private GridLayoutManager mCourseLayoutManager;
 
 
+
     //for the database
     private NoteKeeperOpenHelper mDBOpenHelper;
     public static final int LOADER_NOTES = 0;

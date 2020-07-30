@@ -25,4 +25,9 @@
         android:orderInCategory="103"
         android:title="Send as Email"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_set_notification"
+        android:orderInCategory="104"
+        android:title="Set reminder"
+        app:showAsAction="never"/>
 </menu>
